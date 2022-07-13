@@ -62,8 +62,9 @@ def get_lib_dapeak_parsed_filepath(store_dir, lib_short, da_type):
 ###################
 
 def parse_peakfile(file_in, file_out):
-    df = pd.read_csv(file_in, sep="\t", header=None)
-    # keep only first 6 columns
-    df = df.iloc[:, :6]
+    df = pd.read_csv(file_in, sep="\t", header=None, usecols=[0,1,2])
+    df[3] = df[0] + ":" + df[1].astype(str) + "-" + df[2].astype(str)
+    df[4] = 0
+    df[5] = "."
     df.to_csv(file_out, sep="\t", header=False, index=False)
     return
