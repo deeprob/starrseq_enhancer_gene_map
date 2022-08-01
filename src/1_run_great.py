@@ -7,6 +7,7 @@ def main(
     lib_short,
     git_url,
     diff_activity_type,
+    diff_activity_analysis_type,
     store_dir
     ):
 
@@ -14,7 +15,7 @@ def main(
     da_type = "peaks"
     if diff_activity_type:
         da_type = diff_activity_type
-        peak_desc = "diff_peak"
+        peak_desc = diff_activity_analysis_type
 
     # get peak file url
     peak_url = ut.get_request_url(git_url, peak_desc, lib_short, da_type)
@@ -35,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("git_url", type=str, help="Github repo url where the peak file is stored")
     parser.add_argument("store_dir", type=str, help="Dir to store great results")
     parser.add_argument("--diff_activity_type", type=str, default="", help="type of differential enhancer activity, use this argument to compare induced,repressed and constitutive peaks between lib1 and control")
+    parser.add_argument("--diff_activity_analysis_type", type=str, default="diff_peaks", help="type of method used to measure differential enhancer activity, use this argument to compare differential peaks called using deseq2 or normal bedtools intersection")
 
     cli_args = parser.parse_args()
     lib_args = ut.create_args(cli_args.meta_file, cli_args.lib)
@@ -43,5 +45,6 @@ if __name__ == "__main__":
         lib_args.library_short,
         cli_args.git_url,
         cli_args.diff_activity_type,
+        cli_args.diff_activity_analysis_type,
         cli_args.store_dir
     )    
