@@ -9,7 +9,7 @@
 #SBATCH --chdir /data5/deepro/starrseq/main_library/8_enhancer_gene_map/src
 #SBATCH -o /data5/deepro/starrseq/main_library/8_enhancer_gene_map/slurm/logs/out_great_%a.log
 #SBATCH -e /data5/deepro/starrseq/main_library/8_enhancer_gene_map/slurm/logs/err_great_%a.log
-#SBATCH --array 30-50%1
+#SBATCH --array 1-100%1
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!

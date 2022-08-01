@@ -1,6 +1,8 @@
 import os
+import re
 import json
 from argparse import Namespace
+import requests
 import subprocess
 import pandas as pd
 
@@ -58,8 +60,8 @@ def get_lib_dapeak_parsed_filepath(store_dir, lib_short, da_type, diff_activity_
         )
     return peak_filepath
 
-def get_enhancer_gene_mapped_store_dir(store_dir, peak_desc, lib_short, method):
-    return os.path.join(store_dir, peak_desc, lib_short, method)
+def get_enhancer_gene_mapped_store_dir(store_dir, peak_desc, lib_short, method, analysis_type):
+    return os.path.join(store_dir, peak_desc, lib_short, method, analysis_type)
 
 ###################
 # peakfile parser #
@@ -85,15 +87,59 @@ def get_request_url(git_url_prefix, peak_desc, lib_short, da_activity_type):
     """
     return "/".join([git_url_prefix.strip("/"), peak_desc, lib_short, f"{da_activity_type}.bed"])
 
-def submit_job_to_great(url, store_file):
+def submit_batch_job_to_great(url, store_file):
     subprocess.run([
         "wget", "-O", store_file, url
     ])
     return
 
-def store_great_results(request_url, genome_version, request_name, request_sender, store_file):
-    # http%3A%2F%2Fwww.clientA.com%2Fdata%2Fexample1.bed
+def store_great_results_enrichment(request_url, genome_version, request_name, request_sender, store_file):
     request_url = request_url.replace(":", "%3A").replace("/", f"%2F")
     great_url = f"http://bejerano.stanford.edu/great/public/cgi-bin/greatStart.php?outputType=batch&requestSpecies={genome_version}&requestName={request_name}&requestSender={request_sender}&requestURL={request_url}"
-    submit_job_to_great(great_url, store_file)
+    submit_batch_job_to_great(great_url, store_file)
+    return
+
+def get_peak_file(peak_dir, peak_desc, lib_short, da_activity_type):
+    """
+    Peak file
+    """
+    return os.path.join(peak_dir, peak_desc, lib_short, f"{da_activity_type}.bed")
+
+def get_session_id(resp):
+    id_info = resp.text.split("\n")[0].split(";")[0].strip().replace("'", "")
+    id_info = re.sub(r"\s+", "", id_info)
+    pattern = re.compile("<script>console.log\(outputDir:/scratch/great/tmp/results/(\d{8}-public-4.0.4-\S{6}).d/\)")
+    m = re.match(pattern, id_info)
+    return m.group(1)
+
+def store_great_results_associations(peak_file, store_file):
+    file = open(peak_file, "r")
+    file_data = file.read()
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    payload = {
+        "species": "hg38",
+        "includeCuratedRegDoms" : True,
+        "rule" : "basalPlusExt",
+        "upstream" : 5.0,
+        "downstream" : 1.0,
+        "span" : 1000.0,
+        "twoDistance" : 1000.0,
+        "oneDistance" : 1000.0,
+        "fgChoice": "data",
+        "fgData": file_data,
+        "bgChoice": "wholeGenome",
+        "adv_upstream": 5.0,
+        "adv_downstream": 1.0,
+        "adv_span": 1000.0
+    }
+    great_base_url = "http://great.stanford.edu/public/cgi-bin/greatWeb.php"
+    session = requests.Session()
+    response = session.post(great_base_url, headers=headers, data=payload)
+    session_id = get_session_id(response)
+    assoc_url = f"http://great.stanford.edu/public/cgi-bin/downloadAssociations.php?sessionName={session_id}&species=hg38&foreName=user-provided%20data&backName=&table=region"
+    associations = session.get(assoc_url)
+    with open(store_file, "wb") as f:
+        f.write(associations.content)
+    session.close()
+    file.close()
     return
